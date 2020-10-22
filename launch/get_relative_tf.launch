@@ -1,0 +1,11 @@
+<launch>
+    <param name="baseline_bag" value="/media/marwan/external_drive/ICRA_2021/around_church_17_10/output_around_church_afternoon_0.bag"/>
+    <param name="experiment_bag" value="/media/marwan/external_drive/ICRA_2021/around_church_17_10/output_zed_nn_night_0.bag"/>
+    <param name="icp_iterations" value="300"/> <!-- 300 -->
+    <param name="correspondence" value="10"/>
+    <param name="ransac" value="0"/>
+
+    <node pkg="pointcloud_align" type="transform_trajectories" name="transform_trajectories" output="screen" />
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pointcloud_align)/rviz/viz.rviz" />
+</launch>
