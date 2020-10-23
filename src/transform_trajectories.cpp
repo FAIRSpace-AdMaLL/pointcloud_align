@@ -51,12 +51,14 @@ int main (int argc, char** argv)
   int iterations;
   int correspondence;
   int ransac;
+  double initial_rot;
 
   nh.param<std::string>("/baseline_bag", baseline_bag_name, "");
   nh.param<std::string>("/experiment_bag", experiment_bag_name, "");
   nh.param<int>("/icp_iterations", iterations, 100);
   nh.param<int>("/correspondence", correspondence, 5);
   nh.param<int>("/ransac", ransac, 0);
+  nh.param<double>("/initial_rot", initial_rot, 90.0);
 
   ROS_INFO("Reading from:\n%s\n%s", baseline_bag_name.c_str(), experiment_bag_name.c_str());
 
@@ -111,11 +113,12 @@ int main (int argc, char** argv)
   PointCloudT::Ptr cloud_tr (new PointCloudT);
   *cloud_tr = *experiment_cloud;
 
+
   Eigen::Matrix4d initial_rot_matrix = Eigen::Matrix4d::Identity ();
-  initial_rot_matrix(0, 0) = 0;
-  initial_rot_matrix(0, 1) = -1;
-  initial_rot_matrix(1, 0) = 1;
-  initial_rot_matrix(1, 1) = 0;
+  initial_rot_matrix(0, 0) = std::cos(initial_rot);
+  initial_rot_matrix(0, 1) = -std::sin(initial_rot);
+  initial_rot_matrix(1, 0) = std::sin(initial_rot);
+  initial_rot_matrix(1, 1) = std::cos(initial_rot);
   pcl::transformPointCloud (*cloud_tr, *experiment_cloud, initial_rot_matrix);
 
   pcl::IterativeClosestPoint<PointT, PointT> icp;
