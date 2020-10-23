@@ -18,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(PCL REQUIRED QUIET)
 
 catkin_package(
- INCLUDE_DIRS include
+#  INCLUDE_DIRS include
 #  LIBRARIES pointcloud_align
 #  CATKIN_DEPENDS pcl_conversions pcl_ros roscpp sensor_msgs
  DEPENDS PCL
