@@ -1,0 +1,44 @@
+#pragma once
+
+#include <ros/ros.h>
+
+// PCL specific includes
+#include <sensor_msgs/PointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+// ICP
+#include <pcl/io/ply_io.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
+
+#include <nav_msgs/Path.h>
+
+typedef pcl::PointXYZ PointT;
+typedef pcl::PointCloud<PointT> PointCloudT;
+
+class misaligned 
+{
+    ros::NodeHandle& nh_;
+    ros::Publisher pc_pub_;
+    ros::Publisher path_pub_;
+
+    std::string name_;
+    std::string bag_name_;
+
+    int iterations_;
+    int correspondence_;
+    int ransac_;
+    double initial_rot_;
+
+    PointCloudT::Ptr baseline_cloud_;
+    PointCloudT::Ptr experiment_cloud_;
+
+    nav_msgs::Path path_;
+
+public:
+    misaligned(ros::NodeHandle & nh, std::string param_prefix, PointCloudT::Ptr baseline_cloud);
+
+    bool icp();
+    void write_to_csv(std::string dir);
+};
