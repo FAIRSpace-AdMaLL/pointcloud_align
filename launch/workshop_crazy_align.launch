@@ -1,0 +1,27 @@
+<launch>
+    <param name="baseline_bag" value="/media/marwan/external_drive/ICRA_2021/workshop_23_10/improved_data/workshop_zed_afternoon_teach_0_output.bag"/>
+    <param name="csv_dir" value="/home/marwan/icra_2020/improved_data/"/>
+    <param name="baseline_name" value="crazy_teach"/>
+
+    <rosparam>
+        experiments_list: [crazy_zed_afternoon, crazy_fisheye_afternoon]
+
+        crazy_zed_afternoon:
+            experiment_bag: /media/marwan/external_drive/ICRA_2021/workshop_23_10/improved_data/workshop_zed_afternoon_repeat_0_output.bag
+            icp_iterations: 500
+            correspondence: 10
+            ransac: 0
+            initial_rot: -45
+        
+        crazy_fisheye_afternoon:
+            experiment_bag: /media/marwan/external_drive/ICRA_2021/workshop_23_10/improved_data/workshop_fisheye_afternoon_repeat_0_output.bag
+            icp_iterations: 500
+            correspondence: 10
+            ransac: 0
+            initial_rot: 135
+    </rosparam>
+
+    <node pkg="pointcloud_align" type="transform_trajectories" name="transform_trajectories" output="screen" />
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pointcloud_align)/rviz/crazy.rviz" />
+</launch>
