@@ -39,6 +39,7 @@ misaligned::misaligned(ros::NodeHandle & nh, std::string param_prefix, PointClou
         if (pc_msg != NULL) {
             pcl::fromROSMsg(*pc_msg, *experiment_cloud_);
             ROS_INFO("Found %s experiment pointcloud.",  name_.c_str());
+            pc_pub_.publish(pc_msg);
         }
 
         nav_msgs::Path::ConstPtr path_msg = messageInstance.instantiate<nav_msgs::Path>();
@@ -47,6 +48,8 @@ misaligned::misaligned(ros::NodeHandle & nh, std::string param_prefix, PointClou
             ROS_INFO("Found %s experiment path.",  name_.c_str());
         } 
     }
+
+    path_pub_.publish(path_);
 }
 
 bool misaligned::icp()
