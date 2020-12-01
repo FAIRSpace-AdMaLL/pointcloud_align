@@ -22,13 +22,17 @@ class misaligned
     ros::NodeHandle& nh_;
     ros::Publisher pc_pub_;
     ros::Publisher path_pub_;
+    ros::Publisher pc_pcd_pub_;
 
     std::string name_;
     std::string bag_name_;
-
+    std::string pcd_in_path_;
+    std::string pcd_out_path_;
+    
     int iterations_;
     int correspondence_;
     int ransac_;
+    
     double initial_rot_;
 
     PointCloudT::Ptr baseline_cloud_;
@@ -41,4 +45,7 @@ public:
 
     bool icp();
     void write_to_csv(std::string dir);
+    void transform_pcd_files();
+    
+    bool transform_pcd;
 };

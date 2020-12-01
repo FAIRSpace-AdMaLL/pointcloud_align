@@ -88,6 +88,9 @@ int main (int argc, char** argv)
     misaligned* experiment = (new misaligned (nh, name, baseline_cloud));
     experiment->icp();
     experiment->write_to_csv(csv_dir);
+
+    if(experiment->transform_pcd)
+      experiment->transform_pcd_files();
   }
 
   std::ofstream csv_file;

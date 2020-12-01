@@ -1,10 +1,13 @@
 #include <fstream>
 
+
+#include <tf/tf.h>
 // rosbag includes
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
 #include <pointcloud_align/misaligned.hpp>
+#include <pcl/io/pcd_io.h>
 
 misaligned::misaligned(ros::NodeHandle & nh, std::string param_prefix, PointCloudT::Ptr baseline_cloud)
 :   nh_(nh),
@@ -15,9 +18,13 @@ misaligned::misaligned(ros::NodeHandle & nh, std::string param_prefix, PointClou
     ROS_INFO("Aligning %s", name_.c_str());
     // create publishers
     pc_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(name_ + "/pointcloud", 1, true);
+    pc_pcd_pub_ = nh_.advertise<sensor_msgs::PointCloud2>(name_ + "/transformed_pcd_cloud", 1, true);
     path_pub_ = nh_.advertise<nav_msgs::Path>(name_ + "/path", 1, true);
 
     nh.param<std::string>(name_ + "/experiment_bag", bag_name_, "");
+    nh.param<bool>(name_ + "/transform_pcd", transform_pcd, false);
+    nh.param<std::string>(name_ + "/pcd_in_path", pcd_in_path_, "");
+    nh.param<std::string>(name_ + "/pcd_in_path", pcd_out_path_, "");
     nh.param<int>(name_ + "/icp_iterations", iterations_, 100);
     nh.param<int>(name_ + "/correspondence", correspondence_, 5);
     nh.param<int>(name_ + "/ransac", ransac_, 0);
@@ -134,4 +141,55 @@ void misaligned::write_to_csv(std::string dir)
             pose.pose.orientation.w << std::endl;
     }
     csv_file.close();
+}
+
+void misaligned::transform_pcd_files()
+{
+    std::cout << "Transforming PCD files...\n";
+
+    // create directory and remove old files;
+    int unused = system((std::string("exec rm -r ") + output_dir).c_str());
+    unused = system((std::string("mkdir -p ") + output_dir).c_str());
+
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed (new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr full_transformed_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+    Eigen::Affine3f transformation;
+    double roll, pitch, yaw; 
+
+    for(auto & pose : path_.poses) { 
+      std::string file_name = std::to_string(pose.header.stamp.toSec());
+
+      if (pcl::io::loadPCDFile<pcl::PointXYZ> (input_dir + file_name, *cloud_source) == -1) //* load the file
+      {
+        PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
+        return;
+      }
+
+      tf::Quaternion q(
+        pose.pose.orientation.x,
+        pose.pose.orientation.y,
+        pose.pose.orientation.z,
+        pose.pose.orientation.w);
+      tf::Matrix3x3 m(q);
+      m.getRPY(roll, pitch, yaw);
+
+      pcl::getTransformation(
+        pose.pose.position.x,
+        pose.pose.position.y, 
+        pose.pose.position.z,
+        roll, pitch, yaw);
+
+      pcl::transformPointCloud(*cloud_source, *cloud_transformed, transformation);
+      *full_transformed_cloud += *cloud_transformed;
+
+      pcl::io::savePCDFile(output_dir + file_name, *cloud_transformed);
+      std::cout << file_name << " saved.\n";
+
+      std::cout << output_dir + file_name << " saved.\n";
+    }
+
+    sensor_msgs::PointCloud2 pc_msg;
+    pcl::toROSMsg(*full_transformed_cloud, pc_msg);
+    pc_pcd_pub_.publish(pc_msg);
 }
