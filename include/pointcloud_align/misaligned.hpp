@@ -32,7 +32,9 @@ class misaligned
     int iterations_;
     int correspondence_;
     int ransac_;
-    
+
+    double initial_x_;
+    double initial_y_;
     double initial_rot_;
 
     PointCloudT::Ptr baseline_cloud_;

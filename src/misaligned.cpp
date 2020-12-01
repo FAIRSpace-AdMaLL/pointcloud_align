@@ -6,8 +6,9 @@
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 
-#include <pointcloud_align/misaligned.hpp>
 #include <pcl/io/pcd_io.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pointcloud_align/misaligned.hpp>
 
 misaligned::misaligned(ros::NodeHandle & nh, std::string param_prefix, PointCloudT::Ptr baseline_cloud)
 :   nh_(nh),
@@ -29,6 +30,8 @@ misaligned::misaligned(ros::NodeHandle & nh, std::string param_prefix, PointClou
     nh.param<int>(name_ + "/correspondence", correspondence_, 5);
     nh.param<int>(name_ + "/ransac", ransac_, 0);
     nh.param<double>(name_ + "/initial_rot", initial_rot_, 90.0);
+    nh.param<double>(name_ + "/initial_x", initial_x_, 0.0);
+    nh.param<double>(name_ + "/initial_y", initial_y_, 0.0);
 
     // Topics to read
     std::vector<std::string> topics;
@@ -61,12 +64,21 @@ bool misaligned::icp()
    PointCloudT::Ptr cloud_tr (new PointCloudT);
   *cloud_tr = *experiment_cloud_;
 
-  Eigen::Matrix4d initial_rot_matrix = Eigen::Matrix4d::Identity ();
-  initial_rot_matrix(0, 0) = std::cos(initial_rot_);
-  initial_rot_matrix(0, 1) = -std::sin(initial_rot_);
-  initial_rot_matrix(1, 0) = std::sin(initial_rot_);
-  initial_rot_matrix(1, 1) = std::cos(initial_rot_);
-  pcl::transformPointCloud (*cloud_tr, *experiment_cloud_, initial_rot_matrix);
+  Eigen::Affine3f initial_transformation_affine;
+  Eigen::Matrix4d initial_transformation_matrix;
+
+  initial_transformation_affine = pcl::getTransformation(initial_x_, initial_y_, 0, 0, 0, initial_rot_*3.14/180);
+  initial_transformation_matrix = initial_transformation_affine.cast<double>().matrix();
+  pcl::transformPointCloud (*cloud_tr, *experiment_cloud_, initial_transformation_matrix);
+
+  pcl::VoxelGrid<PointT> downSizeFilter;
+  downSizeFilter.setLeafSize(10.0, 10.0, 10.0);
+  downSizeFilter.setInputCloud(baseline_cloud_);
+  downSizeFilter.filter(*baseline_cloud_);
+
+  downSizeFilter.setLeafSize(10.0, 10.0, 10.0);
+  downSizeFilter.setInputCloud(experiment_cloud_);
+  downSizeFilter.filter(*experiment_cloud_);
 
   pcl::IterativeClosestPoint<PointT, PointT> icp;
   icp.setMaximumIterations(iterations_);
@@ -88,11 +100,11 @@ bool misaligned::icp()
     // print4x4Matrix (icp_rt_matrix);
 
     // transform the experiment cloud to the correct pose
-    pcl::transformPointCloud (*cloud_tr, *experiment_cloud_, Eigen::Matrix4d(icp_rt_matrix*initial_rot_matrix));
+    pcl::transformPointCloud (*cloud_tr, *experiment_cloud_, Eigen::Matrix4d(icp_rt_matrix*initial_transformation_matrix));
 
     // Get the rotation and translation
-    Eigen::Matrix2d rot = icp_rt_matrix.block(0,0,2,2) * initial_rot_matrix.block(0,0,2,2);
-    Eigen::Vector2d trans = icp_rt_matrix.block(0,3,2,1);
+    Eigen::Matrix2d rot = icp_rt_matrix.block(0,0,2,2) * initial_transformation_matrix.block(0,0,2,2);
+    Eigen::Vector2d trans = icp_rt_matrix.block(0,3,2,1) + initial_transformation_matrix.block(0,3,2,1);
 
     ROS_INFO("Correcting poses");
     // transform the experiment path to the teach frame
@@ -148,19 +160,20 @@ void misaligned::transform_pcd_files()
     std::cout << "Transforming PCD files...\n";
 
     // create directory and remove old files;
-    int unused = system((std::string("exec rm -r ") + output_dir).c_str());
-    unused = system((std::string("mkdir -p ") + output_dir).c_str());
+    int unused = system((std::string("exec rm -r ") + pcd_out_path_).c_str());
+    unused = system((std::string("mkdir -p ") + pcd_out_path_).c_str());
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr full_transformed_cloud (new pcl::PointCloud<pcl::PointXYZ>);
-    Eigen::Affine3f transformation;
+    Eigen::Affine3f transformation_affine;
+    Eigen::Matrix4d transformation_matrix;
     double roll, pitch, yaw; 
 
     for(auto & pose : path_.poses) { 
       std::string file_name = std::to_string(pose.header.stamp.toSec());
 
-      if (pcl::io::loadPCDFile<pcl::PointXYZ> (input_dir + file_name, *cloud_source) == -1) //* load the file
+      if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcd_in_path_ + file_name, *cloud_source) == -1) //* load the file
       {
         PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
         return;
@@ -174,19 +187,21 @@ void misaligned::transform_pcd_files()
       tf::Matrix3x3 m(q);
       m.getRPY(roll, pitch, yaw);
 
-      pcl::getTransformation(
+      transformation_affine = pcl::getTransformation(
         pose.pose.position.x,
         pose.pose.position.y, 
         pose.pose.position.z,
         roll, pitch, yaw);
 
-      pcl::transformPointCloud(*cloud_source, *cloud_transformed, transformation);
+      transformation_matrix = transformation_affine.cast<double>().matrix();
+
+      pcl::transformPointCloud(*cloud_source, *cloud_transformed, transformation_matrix);
       *full_transformed_cloud += *cloud_transformed;
 
-      pcl::io::savePCDFile(output_dir + file_name, *cloud_transformed);
+      pcl::io::savePCDFile(pcd_out_path_ + file_name, *cloud_transformed);
       std::cout << file_name << " saved.\n";
 
-      std::cout << output_dir + file_name << " saved.\n";
+      std::cout << pcd_out_path_ + file_name << " saved.\n";
     }
 
     sensor_msgs::PointCloud2 pc_msg;
