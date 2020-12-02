@@ -96,15 +96,16 @@ bool misaligned::icp()
   {
     // std::cout << "\nICP has converged, score is " << icp.getFitnessScore () << std::endl;
     // std::cout << " : experiment_cloud_ -> baseline_cloud_" << std::endl;
-    Eigen::Matrix4d icp_rt_matrix = icp.getFinalTransformation ().cast<double>();
-    // print4x4Matrix (icp_rt_matrix);
+    Eigen::Matrix4d icp_tf_matrix = icp.getFinalTransformation ().cast<double>();
+    // print4x4Matrix (icp_tf_matrix);
 
     // transform the experiment cloud to the correct pose
-    pcl::transformPointCloud (*cloud_tr, *experiment_cloud_, Eigen::Matrix4d(icp_rt_matrix*initial_transformation_matrix));
+    Eigen::Matrix4d resultant_tf = icp_tf_matrix * initial_transformation_matrix;
+    pcl::transformPointCloud (*cloud_tr, *experiment_cloud_, resultant_tf);
 
-    // Get the rotation and translation
-    Eigen::Matrix2d rot = icp_rt_matrix.block(0,0,2,2) * initial_transformation_matrix.block(0,0,2,2);
-    Eigen::Vector2d trans = icp_rt_matrix.block(0,3,2,1) + initial_transformation_matrix.block(0,3,2,1);
+    // Get the rotation and translation componets
+    Eigen::Matrix2d rot = resultant_tf.block(0,0,2,2);
+    Eigen::Vector2d trans = resultant_tf.block(0,3,2,1);
 
     ROS_INFO("Correcting poses");
     // transform the experiment path to the teach frame
