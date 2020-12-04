@@ -24,8 +24,8 @@ misaligned::misaligned(ros::NodeHandle & nh, std::string param_prefix, PointClou
 
     nh.param<std::string>(name_ + "/experiment_bag", bag_name_, "");
     nh.param<bool>(name_ + "/transform_pcd", transform_pcd, false);
-    nh.param<std::string>(name_ + "/pcd_in_path", pcd_in_path_, "");
-    nh.param<std::string>(name_ + "/pcd_in_path", pcd_out_path_, "");
+    nh.param<std::string>(name_ + "/pcd_in_path", pcd_in_dir_, "");
+    nh.param<std::string>(name_ + "/pcd_out_path", pcd_out_dir_, "");
     nh.param<int>(name_ + "/icp_iterations", iterations_, 100);
     nh.param<int>(name_ + "/correspondence", correspondence_, 5);
     nh.param<int>(name_ + "/ransac", ransac_, 0);
@@ -161,25 +161,31 @@ void misaligned::transform_pcd_files()
     std::cout << "Transforming PCD files...\n";
 
     // create directory and remove old files;
-    int unused = system((std::string("exec rm -r ") + pcd_out_path_).c_str());
-    unused = system((std::string("mkdir -p ") + pcd_out_path_).c_str());
+    int unused = system((std::string("exec rm -r ") + pcd_out_dir_).c_str());
+    unused = system((std::string("mkdir -p ") + pcd_out_dir_).c_str());
 
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed (new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr full_transformed_cloud (new pcl::PointCloud<pcl::PointXYZ>);
     Eigen::Affine3f transformation_affine;
     Eigen::Matrix4d transformation_matrix;
-    double roll, pitch, yaw; 
+    geometry_msgs::PoseStamped pose;
+    double roll, pitch, yaw;
+    std::string pcd_path;
 
-    for(auto & pose : path_.poses) { 
-      std::string file_name = std::to_string(pose.header.stamp.toSec());
-
-      if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcd_in_path_ + file_name, *cloud_source) == -1) //* load the file
+    int len = path_.poses.size();
+    for(int i=0; i<len && ros::ok(); i++) { 
+      char file_name_buffer[11]; // xxxxxx.pcd
+      sprintf(file_name_buffer, "%06d.pcd", i);
+      pcd_path = pcd_in_dir_ + std::string(file_name_buffer);
+      
+      if (pcl::io::loadPCDFile<pcl::PointXYZ> (pcd_path, *cloud_source) == -1) //* load the file
       {
-        PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
+        ROS_ERROR("Couldn't read file %s \n", pcd_path.c_str());
         return;
       }
 
+      pose = path_.poses[i];
       tf::Quaternion q(
         pose.pose.orientation.x,
         pose.pose.orientation.y,
@@ -199,13 +205,11 @@ void misaligned::transform_pcd_files()
       pcl::transformPointCloud(*cloud_source, *cloud_transformed, transformation_matrix);
       *full_transformed_cloud += *cloud_transformed;
 
-      pcl::io::savePCDFile(pcd_out_path_ + file_name, *cloud_transformed);
-      std::cout << file_name << " saved.\n";
+      sensor_msgs::PointCloud2 pc_msg;
+      pcl::toROSMsg(*full_transformed_cloud, pc_msg);
+      std::cout << pc_msg.header.frame_id;
 
-      std::cout << pcd_out_path_ + file_name << " saved.\n";
+      pcl::io::savePCDFile(pcd_path, *cloud_transformed);
+      std::cout << pcd_path << " saved.\n";
     }
-
-    sensor_msgs::PointCloud2 pc_msg;
-    pcl::toROSMsg(*full_transformed_cloud, pc_msg);
-    pc_pcd_pub_.publish(pc_msg);
 }

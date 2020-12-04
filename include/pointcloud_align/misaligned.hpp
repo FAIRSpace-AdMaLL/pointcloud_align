@@ -26,8 +26,8 @@ class misaligned
 
     std::string name_;
     std::string bag_name_;
-    std::string pcd_in_path_;
-    std::string pcd_out_path_;
+    std::string pcd_in_dir_;
+    std::string pcd_out_dir_;
     
     int iterations_;
     int correspondence_;
