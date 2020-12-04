@@ -2,6 +2,7 @@
 
 
 #include <tf/tf.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 // rosbag includes
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -103,24 +104,43 @@ bool misaligned::icp()
     Eigen::Matrix4d resultant_tf = icp_tf_matrix * initial_transformation_matrix;
     pcl::transformPointCloud (*cloud_tr, *experiment_cloud_, resultant_tf);
 
-    // Get the rotation and translation componets
-    Eigen::Matrix2d rot = resultant_tf.block(0,0,2,2);
-    Eigen::Vector2d trans = resultant_tf.block(0,3,2,1);
+    Eigen::Vector4d initial_position;
+    Eigen::Vector4d transformed_position;
+    tf2::Matrix3x3 transformed_orientation;
+    tf2::Quaternion quat;
 
-    ROS_INFO("Correcting poses");
-    // transform the experiment path to the teach frame
+    ROS_INFO("Transforming poses...");
+    // transform pose from the local frame to the global frame
     for (auto & pose : path_.poses)
     {
-      Eigen::Vector2d cur_pose(pose.pose.position.x, pose.pose.position.y);
-      Eigen::Vector2d corrected_pose = rot*cur_pose + trans;
+      // Transforming position
+      initial_position[0] = pose.pose.position.x;
+      initial_position[1] = pose.pose.position.y;
+      initial_position[2] = pose.pose.position.z;
+      initial_position[3] = 1;
 
-      pose.pose.position.x = corrected_pose[0];
-      pose.pose.position.y = corrected_pose[1];
+      transformed_position = resultant_tf * initial_position;
+      pose.pose.position.x = transformed_position[0];
+      pose.pose.position.y = transformed_position[1];
+      pose.pose.position.z = transformed_position[2];
+
+      // Transforming orientation
+      tf2::Matrix3x3 tf_rot_mat(
+          resultant_tf(0, 0), resultant_tf(0, 1), resultant_tf(0, 2),
+          resultant_tf(1, 0), resultant_tf(1, 1), resultant_tf(1, 2),
+          resultant_tf(2, 0), resultant_tf(2, 1), resultant_tf(1, 2));
+        
+      tf2::fromMsg(pose.pose.orientation, quat);
+      tf2::Matrix3x3 initial_rotation(quat);
+
+      transformed_orientation = initial_rotation * tf_rot_mat;
+      
+      transformed_orientation.getRotation(quat);
+      pose.pose.orientation = tf2::toMsg(quat);
     }
 
     ROS_INFO("%s publishing messages", name_.c_str());
     
-
     path_pub_.publish(path_);
 
     sensor_msgs::PointCloud2 pc_msg;
