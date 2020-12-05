@@ -123,7 +123,7 @@ bool misaligned::icp()
       // Transforming orientation
       tf2::Matrix3x3 tf_rot_mat(resultant_tf(0, 0), resultant_tf(0, 1), resultant_tf(0, 2), resultant_tf(1, 0),
                                 resultant_tf(1, 1), resultant_tf(1, 2), resultant_tf(2, 0), resultant_tf(2, 1),
-                                resultant_tf(1, 2));
+                                resultant_tf(2, 2));
 
       tf2::fromMsg(pose.pose.orientation, quat);
       tf2::Matrix3x3 initial_rotation(quat);
@@ -176,12 +176,13 @@ void misaligned::transform_pcd_files()
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_source(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_transformed(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr full_transformed_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  // pcl::PointCloud<pcl::PointXYZ>::Ptr full_transformed_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   Eigen::Affine3f transformation_affine;
   Eigen::Matrix4d transformation_matrix;
   geometry_msgs::PoseStamped pose;
   double roll, pitch, yaw;
   std::string pcd_path;
+  sensor_msgs::PointCloud2 pc_msg;
 
   int len = path_.poses.size();
   for (int i = 0; i < len && ros::ok(); i++)
@@ -208,12 +209,14 @@ void misaligned::transform_pcd_files()
     transformation_matrix = transformation_affine.cast<double>().matrix();
 
     pcl::transformPointCloud(*cloud_source, *cloud_transformed, transformation_matrix);
-    *full_transformed_cloud += *cloud_transformed;
+    // *full_transformed_cloud += *cloud_source;
 
-    sensor_msgs::PointCloud2 pc_msg;
-    pcl::toROSMsg(*full_transformed_cloud, pc_msg);
-    std::cout << pc_msg.header.frame_id;
+    pcl::toROSMsg(*cloud_transformed, pc_msg);
+    pc_msg.header.frame_id = "odom";
+    pc_msg.header.stamp = ros::Time::now();
+    pc_pcd_pub_.publish(pc_msg);
 
+    pcd_path = pcd_out_dir_ + std::string(file_name_buffer);
     pcl::io::savePCDFile(pcd_path, *cloud_transformed);
     std::cout << pcd_path << " saved.\n";
   }
