@@ -8,7 +8,7 @@
 
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
-#include <pointcloud_align/misaligned.hpp>
+#include <pointcloud_align/pointcloud_align.hpp>
 
 PointCloudAlign::PointCloudAlign(ros::NodeHandle& nh, std::string name_prefix) : nh_(nh), name_prefix_(name_prefix)
 {

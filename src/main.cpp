@@ -1,6 +1,6 @@
 #include <ros/ros.h>
 
-#include <pointcloud_align/misaligned.hpp>
+#include <pointcloud_align/pointcloud_align.hpp>
 
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;

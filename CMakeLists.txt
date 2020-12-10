@@ -36,12 +36,12 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
 )
 
-add_executable(transform_trajectories 
-  src/transform_trajectories.cpp
-  src/misaligned.cpp
+add_executable($(PROJECT_NAME) 
+  src/main.cpp
+  src/pointcloud_align.cpp
 )
 
-target_link_libraries(transform_trajectories
+target_link_libraries($(PROJECT_NAME)
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
