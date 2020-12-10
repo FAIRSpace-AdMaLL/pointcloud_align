@@ -15,17 +15,12 @@
 typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
-class misaligned
+class PointCloudAlign
 {
   ros::NodeHandle& nh_;
-  ros::Publisher pc_pub_;
-  ros::Publisher path_pub_;
-  ros::Publisher pc_pcd_pub_;
 
-  std::string name_;
-  std::string bag_name_;
-  std::string pcd_in_dir_;
-  std::string pcd_out_dir_;
+  std::string name_prefix_;
+  std::vector<std::string> pcd_list_;
 
   int iterations_;
   int correspondence_;
@@ -35,17 +30,22 @@ class misaligned
   double initial_y_;
   double initial_rot_;
 
-  PointCloudT::Ptr baseline_cloud_;
-  PointCloudT::Ptr experiment_cloud_;
+  PointCloudT::Ptr tf_cloud_;
+  PointCloudT::Ptr input_cloud_;
+  PointCloudT::Ptr transformed_cloud_;
+  
+  Eigen::Matrix4d tf_matrix_;
 
   nav_msgs::Path path_;
 
 public:
-  misaligned(ros::NodeHandle& nh, std::string param_prefix, PointCloudT::Ptr baseline_cloud);
+  PointCloudAlign(ros::NodeHandle& nh, std::string param_prefix);
 
-  bool icp();
-  void write_to_csv(std::string dir);
-  void transform_pcd_files();
+  void get_transform(const PointCloudT::Ptr& refernce_cloud);
+  void get_cloud(PointCloudT::Ptr& refernce_cloud);
+  void transform_and_save();
+  void transform_path(nav_msgs::Path path, std::string write_dir);
+  void transform_pcd_batch(std::string name, std::string read_dir, std::string write_dir, std::string pub_topic);
 
   bool transform_pcd;
 };
