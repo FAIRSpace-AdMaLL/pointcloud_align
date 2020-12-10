@@ -1,8 +1,7 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 3.5.1)
 project(pointcloud_align)
 
-## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+set(CMAKE_CXX_STANDARD 14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -36,12 +35,12 @@ include_directories(
   ${PCL_INCLUDE_DIRS}
 )
 
-add_executable($(PROJECT_NAME) 
+add_executable(${PROJECT_NAME}
   src/main.cpp
   src/pointcloud_align.cpp
 )
 
-target_link_libraries($(PROJECT_NAME)
+target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
