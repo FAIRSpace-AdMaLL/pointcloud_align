@@ -14,7 +14,7 @@
 #include <nav_msgs/Path.h>
 
 // pcl::PointXYZI
-typedef pcl::PointXYZI PointT;
+typedef pcl::PointXYZ PointT;
 typedef pcl::PointCloud<PointT> PointCloudT;
 
 class PointCloudAlign
@@ -52,7 +52,7 @@ public:
   void get_cloud(PointCloudT::Ptr& refernce_cloud);
   void set_as_global();
   void transform_and_save();
-  void transform_path(nav_msgs::Path path, std::string write_dir);
+  void transform_path(std::string write_dir);
   void transform_pointcloud_from_bag(std::string name, std::string read_topic, std::string pub_topic);
   void transform_pcd_batch(std::string name, std::string read_dir, std::string write_dir, std::string pub_topic);
 

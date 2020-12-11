@@ -127,7 +127,7 @@ void PointCloudAlign::get_transform(const PointCloudT::Ptr& refernce_cloud)
 
   if (icp.hasConverged())
   {
-    tf_matrix_ = initial_tf_matrix * icp.getFinalTransformation().cast<double>();
+    tf_matrix_ = icp.getFinalTransformation().cast<double>()* initial_tf_matrix;
     ROS_INFO("%s: ICP converged.", name_prefix_.c_str());
 
     pcl::toROSMsg(*tf_cloud_, pc_msg);
@@ -141,7 +141,7 @@ void PointCloudAlign::get_transform(const PointCloudT::Ptr& refernce_cloud)
   }
 }
 
-void PointCloudAlign::transform_path(nav_msgs::Path path, std::string write_dir)
+void PointCloudAlign::transform_path(std::string write_dir)
 {
   // transform pose from the local frame to the global frame
   Eigen::Vector4d initial_position;
@@ -150,7 +150,7 @@ void PointCloudAlign::transform_path(nav_msgs::Path path, std::string write_dir)
   tf2::Quaternion quat;
 
   ROS_INFO("Transforming poses...");
-  for (auto& pose : path.poses)
+  for (auto& pose : path_.poses)
   {
     // Transforming position
     initial_position[0] = pose.pose.position.x;
@@ -176,6 +176,9 @@ void PointCloudAlign::transform_path(nav_msgs::Path path, std::string write_dir)
     pose.pose.orientation = tf2::toMsg(quat);
   }
 
+  path_pub_.publish(path_);
+  ROS_INFO("Published transformed path.");
+
   if (write_dir != "")
   {
     ROS_INFO("Writing to CSV.");
@@ -184,7 +187,7 @@ void PointCloudAlign::transform_path(nav_msgs::Path path, std::string write_dir)
     csv_file.open(write_dir);
     csv_file << "#timestamp, tx, ty, tz, qx, qy, qz, qw\n";
 
-    for (auto& pose : path.poses)
+    for (auto& pose : path_.poses)
     {
       csv_file << pose.header.stamp << ", " << pose.pose.position.x << ", " << pose.pose.position.y << ", "
                << pose.pose.position.z << ", " << pose.pose.orientation.x << ", " << pose.pose.orientation.y << ", "
@@ -199,7 +202,7 @@ void PointCloudAlign::transform_and_save()
   // Transform path and save it to csv
   std::string csv_path;
   nh_.param<std::string>(name_prefix_ + "/csv_path", csv_path, "");
-  transform_path(path_, csv_path);
+  transform_path(csv_path);
 
   // Transform pointcloud from bag
   std::string read_topic;
