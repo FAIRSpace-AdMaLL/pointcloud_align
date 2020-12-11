@@ -1,0 +1,46 @@
+<launch>
+    <rosparam>
+        datasets_list: [going, back]
+
+        going:
+            pointcloud_and_trajectory_rosbag: "/home/marwan/topological_maps/longshaw_long_path_0/map_and_trajectory.bag"
+            pointcloud_topic: "/lio_sam/mapping/path_cloud"
+            path_topic: "/lio_sam/mapping/path"
+            csv_path: "/home/marwan/topological_maps/longshaw_long_path_0/trajectory.csv"
+            
+            bag_cloud_list: ["map"]
+            map:
+                read_topic: "/lio_sam/mapping/map_global"
+                pub_topic: "/map_global"
+
+        back:
+            pointcloud_and_trajectory_rosbag: "/home/marwan/topological_maps/longshaw_long_path_1/map_and_trajectory.bag"
+            pointcloud_topic: "/lio_sam/mapping/path_cloud"
+            path_topic: "/lio_sam/mapping/path"
+            csv_path: "/home/marwan/topological_maps/longshaw_long_path_1/trajectory.csv"
+
+            icp:
+                iterations: 10000
+                ransac: 0
+                correspondence: 40
+                downsample: 0
+                initial_x: -160
+                initial_y: -900
+                initial_yaw: -90
+
+            bag_cloud_list: ["map"]
+            map:
+                read_topic: "/lio_sam/mapping/map_global"
+                pub_topic: "/map_global"
+
+            pcd_list: ["deskewed"]
+            deskewed:
+                read_dir: "/home/marwan/topological_maps/longshaw_long_path_1/deskewed_cloud_lidar_frame/"
+                publish_topic: "new_map"
+            
+    </rosparam>
+
+    <node pkg="pointcloud_align" type="pointcloud_align" name="pointcloud_align" output="screen" />
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pointcloud_align)/rviz/longshaw_topological_maps.rviz" />
+</launch>
