@@ -4,9 +4,6 @@
 
 #include <memory> 
 
-typedef pcl::PointXYZ PointT;
-typedef pcl::PointCloud<PointT> PointCloudT;
-
 int main(int argc, char** argv)
 {
   // Initialize ROS
@@ -22,12 +19,14 @@ int main(int argc, char** argv)
   PointCloudAlign* refernce_dataset = (new PointCloudAlign(nh, datasets[0]));
 
   refernce_dataset->get_cloud(refernce_cloud);
+  refernce_dataset->set_as_global();
+  refernce_dataset->transform_and_save();
 
   for (std::size_t i = 1; i < datasets.size(); i++)
   {
-    std::unique_ptr<PointCloudAlign> refernce_dataset = std::make_unique<PointCloudAlign>(nh, datasets[i]);
-    refernce_dataset->get_transform(refernce_cloud);
-    refernce_dataset->transform_and_save();
+    PointCloudAlign* local_dataset = new PointCloudAlign(nh, datasets[i]);
+    local_dataset->get_transform(refernce_cloud);
+    local_dataset->transform_and_save();
   }
 
   ros::spin ();
