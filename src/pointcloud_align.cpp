@@ -268,7 +268,7 @@ void PointCloudAlign::transform_pcd_batch(std::string name, std::string read_dir
   ROS_INFO("Transforming %s PCD files...", name.c_str());
 
   // create directory and remove old files;
-  if (write_dir != " ")
+  if (write_dir != "")
   {
     int unused = system((std::string("exec rm -r ") + write_dir).c_str());
     unused = system((std::string("mkdir -p ") + write_dir).c_str());
@@ -285,9 +285,9 @@ void PointCloudAlign::transform_pcd_batch(std::string name, std::string read_dir
   sensor_msgs::PointCloud2 pc_msg;
   ros::Publisher pc_pub;
 
-  pc_pub = nh_.advertise<sensor_msgs::PointCloud2>(name_prefix_ + pub_topic, 1, true);
-  pcl::VoxelGrid<PointT> downSizeFilter;
-  downSizeFilter.setLeafSize(10.0, 10.0, 10.0);
+  pc_pub = nh_.advertise<sensor_msgs::PointCloud2>(name_prefix_ + "/" +pub_topic, 1, true);
+  // pcl::VoxelGrid<PointT> downSizeFilter;
+  // downSizeFilter.setLeafSize(10.0, 10.0, 10.0);
   int len = path_.poses.size();
 
   for (int i = 0; i < len && ros::ok(); i++)
@@ -324,7 +324,7 @@ void PointCloudAlign::transform_pcd_batch(std::string name, std::string read_dir
     pc_pub.publish(pc_msg);
 
     // Saving transformed cloud to a PCD if a dir is provided
-    if (write_dir != " ")
+    if (write_dir != "")
     {
       pcd_path = write_dir + std::string(file_name_buffer);
       pcl::io::savePCDFile(pcd_path, *cloud_transformed);
