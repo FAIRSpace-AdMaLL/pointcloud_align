@@ -54,7 +54,7 @@ public:
   void transform_and_save();
   void transform_path(std::string write_dir);
   void transform_pointcloud_from_bag(std::string name, std::string read_topic, std::string pub_topic);
-  void transform_pcd_batch(std::string name, std::string read_dir, std::string write_dir, std::string pub_topic);
+  void transform_pcd_batch(std::string name, std::string read_dir, std::string write_dir, std::string pub_topic, bool is_local);
 
   bool transform_pcd;
 };

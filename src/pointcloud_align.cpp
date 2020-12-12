@@ -220,6 +220,7 @@ void PointCloudAlign::transform_and_save()
   // Transform PCD files
   std::string read_dir;
   std::string write_dir;
+  bool is_local;
 
   for (auto dataset : pcd_list_)
   {
@@ -228,8 +229,9 @@ void PointCloudAlign::transform_and_save()
     nh_.param<std::string>(name_prefix_ + "/" + dataset + "/read_dir", read_dir, "");
     nh_.param<std::string>(name_prefix_ + "/" + dataset + "/write_dir", write_dir, "");
     nh_.param<std::string>(name_prefix_ + "/" + dataset + "/publish_topic", pub_topic, "");
+    nh_.param<bool>(name_prefix_ + "/" + dataset + "/is_local", is_local, true);
 
-    transform_pcd_batch(dataset, read_dir, write_dir, pub_topic);
+    transform_pcd_batch(dataset, read_dir, write_dir, pub_topic, is_local);
   }
 }
 
@@ -263,7 +265,7 @@ void PointCloudAlign::transform_pointcloud_from_bag(std::string name, std::strin
   }
 }
 
-void PointCloudAlign::transform_pcd_batch(std::string name, std::string read_dir, std::string write_dir, std::string pub_topic)
+void PointCloudAlign::transform_pcd_batch(std::string name, std::string read_dir, std::string write_dir, std::string pub_topic, bool is_local)
 {
   ROS_INFO("Transforming %s PCD files...", name.c_str());
 
@@ -304,16 +306,23 @@ void PointCloudAlign::transform_pcd_batch(std::string name, std::string read_dir
     }
 
     // Getting transform from pose
-    pose = path_.poses[i];
-    tf::Quaternion q(pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z,
-                     pose.pose.orientation.w);
-    tf::Matrix3x3 m(q);
-    m.getRPY(roll, pitch, yaw);
+    if(is_local)
+    {
+      pose = path_.poses[i];
+      tf::Quaternion q(pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z,
+                      pose.pose.orientation.w);
+      tf::Matrix3x3 m(q);
+      m.getRPY(roll, pitch, yaw);
 
-    tf_affine =
-        pcl::getTransformation(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z, roll, pitch, yaw);
-    tf_matrix = tf_affine.cast<double>().matrix();
-
+      tf_affine =
+          pcl::getTransformation(pose.pose.position.x, pose.pose.position.y, pose.pose.position.z, roll, pitch, yaw);
+      tf_matrix = tf_affine.cast<double>().matrix();
+    }
+    else
+    {
+      tf_matrix = tf_matrix_;
+    }
+    
     // Transforming the cloud
     pcl::transformPointCloud(*cloud_source, *cloud_transformed, tf_matrix);
 
