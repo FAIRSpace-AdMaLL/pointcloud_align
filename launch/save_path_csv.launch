@@ -1,0 +1,22 @@
+<launch>
+    <rosparam>
+        datasets_list: [path_0]
+
+        path_0:
+            <!-- Set pointcloud_and_trajectory_rosbag and  csv_path -->
+            pointcloud_and_trajectory_rosbag: "/home/marwan/courtyard_localization_0/map_and_trajectory.bag"
+            csv_path: "/home/marwan/courtyard_localization_0/trajectory.csv"
+            
+            pointcloud_topic: "/lio_sam/mapping/path_cloud"
+            path_topic: "/lio_sam/mapping/path"
+
+            bag_cloud_list: ["map"]
+            map:
+                read_topic: "/lio_sam/mapping/map_global"
+                pub_topic: "/map_global"
+    </rosparam>
+
+    <node pkg="pointcloud_align" type="pointcloud_align" name="pointcloud_align" output="screen" />
+
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pointcloud_align)/rviz/longshaw_short.rviz" />
+</launch>
