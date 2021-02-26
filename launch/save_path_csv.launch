@@ -17,6 +17,4 @@
     </rosparam>
 
     <node pkg="pointcloud_align" type="pointcloud_align" name="pointcloud_align" output="screen" />
-
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find pointcloud_align)/rviz/longshaw_short.rviz" />
 </launch>
